@@ -1,6 +1,7 @@
 package com.example.ai_virtual_assistance.ui.home;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
@@ -34,6 +35,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class HomeFragment extends Fragment {
@@ -54,7 +56,6 @@ public class HomeFragment extends Fragment {
         HomeViewModel homeViewModel =
                 new ViewModelProvider(this).get(HomeViewModel.class);
 
-        System.out.println("### in HomeFragment");
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
@@ -66,11 +67,9 @@ public class HomeFragment extends Fragment {
         editText = binding.editText;
         Button assistButton = binding.assistButton;
 
-        assistButton.setOnClickListener(e -> buttonAssist(root));
+        assistButton.setOnClickListener(e -> buttonAssist());
 
         // Verify that the ID R.id.editText is correct and exists in the header layout
-        editText.setText("this is a test");
-
         textToSpeech = new TextToSpeech(getContext(), new TextToSpeech.OnInitListener() {
             @Override
             public void onInit(int i) {
@@ -80,6 +79,8 @@ public class HomeFragment extends Fragment {
 
         intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa-IR"); // Farsi language code
+//        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak something");
 
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(getContext());
         speechRecognizer.setRecognitionListener(new RecognitionListener() {
@@ -141,8 +142,33 @@ public class HomeFragment extends Fragment {
         return root;
     }
 
+    private void sendMessageToServer(String inputMessage) {
+        String url = "http://127.0.0.1:5000//get_response?input=" + Uri.encode(inputMessage);
+    
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url, null,
+            new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+                    try {
+                        String serverResponse = response.getString("response");
+                        gptTextView.setText(serverResponse);
+                        textToSpeech.speak(serverResponse, TextToSpeech.QUEUE_FLUSH, null, null);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                        gptTextView.setText("Error parsing response.");
+                    }
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    gptTextView.setText("Server error: " + error.toString());
+                }
+            });
+    
+        Volley.newRequestQueue(getContext()).add(jsonObjectRequest);
+    }
 
-    public void buttonAssist(View view) {
+    public void buttonAssist() {
         if (textToSpeech.isSpeaking()) {
             textToSpeech.stop();
             return;
