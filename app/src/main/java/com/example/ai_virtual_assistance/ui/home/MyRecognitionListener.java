@@ -8,9 +8,11 @@ import java.util.ArrayList;
 
 public class MyRecognitionListener implements RecognitionListener {
     private final SpeechRecognizer speechRecognizer;
+    private final ServerConnection serverConnection;
 
-    public MyRecognitionListener(SpeechRecognizer speechRecognizer) {
+    public MyRecognitionListener(SpeechRecognizer speechRecognizer, ServerConnection serverConnection) {
         this.speechRecognizer = speechRecognizer;
+        this.serverConnection = serverConnection;
     }
 
     @Override
@@ -53,9 +55,17 @@ public class MyRecognitionListener implements RecognitionListener {
             System.out.println(string);
 //                    editText.setText(string);
 //                    chatGPTModel(string);
+            String message = createMessage(string);
+            // TODO: 20.05.24:
+//            serverConnection.sendMessage(message);
         } else {
             System.out.println("matches is null");
         }
+    }
+
+    public String createMessage(String string) {
+        // TODO: 20.05.24
+        return "";
     }
 
     @Override

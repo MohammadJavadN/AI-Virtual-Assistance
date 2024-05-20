@@ -67,7 +67,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             handleTouch(event);
             return true;
         } else if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            ((MainActivity) getContext()).speech();
+            ((MainActivity) getContext()).listenToSpeak();
             return true;
         }
         return false;
