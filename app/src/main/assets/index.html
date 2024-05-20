@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html ng-app="Recog">
+<head>
+    <meta charset="UTF-8">
+    <title>Speech Recognition</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="scripts.js"></script>
+    <style>
+        figure {
+            position: relative;
+            width: 75px;
+            margin: 9px auto;
+        }
+        figure textarea {
+            display: block;
+            width: 75px;
+            height: 22px;
+            font-family: 'Lato';
+            font-size: 22px;
+            resize: none;
+        }
+        figure .fa {
+            position: absolute;
+            bottom: -40px;
+            right: -40px;
+            padding: 14px 20px;
+            background: dodgerblue;
+            color: white;
+            border-radius: 100%;
+            font-size: 33px;
+            cursor: pointer;
+        }
+        figure .fa.active {
+            background: red;
+        }
+    </style>
+</head>
+<body ng-controller="RecogCtrl">
+<figure>
+    <textarea type="text" ng-model="text"></textarea>
+    <i class="fa fa-microphone" ng-class="{active: on}" ng-click="startStop()"></i>
+</figure>
+</body>
+</html>

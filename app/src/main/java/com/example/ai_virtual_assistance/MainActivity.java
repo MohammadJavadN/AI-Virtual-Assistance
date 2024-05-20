@@ -12,6 +12,9 @@ import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
@@ -22,6 +25,8 @@ import androidx.core.content.ContextCompat;
 import com.example.ai_virtual_assistance.ui.home.CameraPreview;
 import com.example.ai_virtual_assistance.ui.home.MyRecognitionListener;
 import com.example.ai_virtual_assistance.ui.home.ServerConnection;
+
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements ServerConnection.OnMessageReceived, TextToSpeech.OnInitListener {
 
@@ -51,6 +56,15 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
 
         getPermission();
 //        speak("Hello, how are you?");
+
+        // Set up WebView
+        WebView webView = findViewById(R.id.webview);
+        WebSettings webSettings = webView.getSettings();
+        webSettings.setJavaScriptEnabled(true);
+        webView.setWebViewClient(new WebViewClient());
+
+        // Load local HTML file
+        webView.loadUrl("file:///android_asset/index.html");
     }
 
     private void getPermission() {
@@ -67,11 +81,13 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
     }
 
     private void setupTTS() {
-        tts = new TextToSpeech(this, this);
+        // Initialize TTS with eSpeak NG
+        tts = new TextToSpeech(this, this, "com.google.android.tts");
+//        tts = new TextToSpeech(this, this);
 
         intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-//        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa"); // Farsi language code
+//        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ur"); // Farsi language code
 //        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak something");
 
         serverConnection = new ServerConnection("your.server.address", 12345, this);
@@ -85,14 +101,23 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
 
     @Override
     public void onInit(int status) {
+        int result;
         if (status == TextToSpeech.SUCCESS) {
 //            int result = tts.setLanguage(new Locale("fa_IR"));
-            int result = tts.setSpeechRate((float) 0.8);
+            result = tts.setLanguage(new Locale("ur"));
+//            result = tts.setLanguage(Locale.UK);
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 Log.e("TTS", "Language not supported or missing data");
-            } else {
+                Log.e("TTS", "Create new intent");
+                // Handle the error
+                Intent installIntent = new Intent();
+                installIntent.setAction(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+                startActivity(installIntent);
+                Log.e("TTS", "activity started");
+            }
+            else {
                 Log.d("TTS", "Initialization successful");
-                speak("Hello, how are you?");
+                speak("سلام خوش آمدید. چطور می توانم به شما کمک کنم؟");
             }
         } else {
             Log.e("TTS", "Initialization failed");
