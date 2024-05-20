@@ -56,15 +56,6 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
 
         getPermission();
 //        speak("Hello, how are you?");
-
-        // Set up WebView
-        WebView webView = findViewById(R.id.webview);
-        WebSettings webSettings = webView.getSettings();
-        webSettings.setJavaScriptEnabled(true);
-        webView.setWebViewClient(new WebViewClient());
-
-        // Load local HTML file
-        webView.loadUrl("file:///android_asset/index.html");
     }
 
     private void getPermission() {
