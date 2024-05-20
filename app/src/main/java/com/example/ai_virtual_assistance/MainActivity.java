@@ -1,8 +1,8 @@
 package com.example.ai_virtual_assistance;
 
+import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.INTERNET;
 import static android.Manifest.permission.RECORD_AUDIO;
-import static android.Manifest.permission.CAMERA;
 
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -22,8 +22,6 @@ import androidx.core.content.ContextCompat;
 import com.example.ai_virtual_assistance.ui.home.CameraPreview;
 import com.example.ai_virtual_assistance.ui.home.MyRecognitionListener;
 import com.example.ai_virtual_assistance.ui.home.ServerConnection;
-
-import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements ServerConnection.OnMessageReceived, TextToSpeech.OnInitListener {
 
@@ -63,22 +61,26 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
             ActivityCompat.requestPermissions(this, new String[]{CAMERA, RECORD_AUDIO, INTERNET},
                     REQUEST_CAMERA_PERMISSION);
         } else {
-            tts = new TextToSpeech(this, this);
-
-            intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa"); // Farsi language code
-            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak something");
-
-            serverConnection = new ServerConnection("your.server.address", 12345, this);
-//            serverConnection.connect();
-
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
-            recognitionListener = new MyRecognitionListener(speechRecognizer, serverConnection);
-            speechRecognizer.setRecognitionListener(recognitionListener);
-
+            setupTTS();
             setupCamera();
         }
+    }
+
+    private void setupTTS() {
+        tts = new TextToSpeech(this, this);
+
+        intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+//        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa"); // Farsi language code
+//        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak something");
+
+        serverConnection = new ServerConnection("your.server.address", 12345, this);
+//            serverConnection.connect();
+
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+        recognitionListener = new MyRecognitionListener(speechRecognizer, serverConnection);
+        speechRecognizer.setRecognitionListener(recognitionListener);
+
     }
 
     @Override
@@ -99,6 +101,7 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
 
     private void speak(String text) {
         if (tts != null && !tts.getEngines().isEmpty()) {
+            releaseCamera();
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
         } else {
             Log.e("TTS", "TTS engine is not initialized or not available");
@@ -128,15 +131,23 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
             tts.stop();
             return;
         }
+        releaseCamera();
         System.out.println("### in speech");
         speechRecognizer.startListening(intent);
     }
 
+    public void stopListening(){
+        speechRecognizer.stopListening();
+    }
+
     private void setupCamera() {
+        // Open the camera and create a CameraPreview instance
         mCamera = getCameraInstance();
-        mPreview = new CameraPreview(this, mCamera);
-        FrameLayout preview = findViewById(R.id.camera_preview);
-        preview.addView(mPreview);
+        if (mCamera != null) {
+            mPreview = new CameraPreview(this, mCamera);
+            FrameLayout preview = findViewById(R.id.camera_preview);
+            preview.addView(mPreview);
+        }
     }
 
     @Override
@@ -145,6 +156,17 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
         releaseCamera();
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (mCamera == null) {
+            mCamera = getCameraInstance();
+            if (mCamera != null) {
+                mPreview.setCamera(mCamera);
+                mCamera.startPreview();
+            }
+        }
+    }
     private void releaseCamera() {
         if (mCamera != null) {
             mCamera.release();
@@ -157,21 +179,7 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_CAMERA_PERMISSION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                tts = new TextToSpeech(this, this);
-
-                intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa"); // Farsi language code
-                intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak something");
-
-                serverConnection = new ServerConnection("your.server.address", 12345, this);
-//            serverConnection.connect();
-
-                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
-                recognitionListener = new MyRecognitionListener(speechRecognizer, serverConnection);
-                speechRecognizer.setRecognitionListener(recognitionListener);
-
+                setupTTS();
                 setupCamera();
             } else {
                 // Permission denied

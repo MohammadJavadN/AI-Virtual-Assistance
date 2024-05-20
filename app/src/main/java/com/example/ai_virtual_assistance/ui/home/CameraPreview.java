@@ -26,6 +26,18 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         setOnTouchListener(this); // Set the touch listener
     }
 
+    public void setCamera(Camera camera) {
+        mCamera = camera;
+        if (mCamera != null) {
+            try {
+                mCamera.setPreviewDisplay(mHolder);
+                mCamera.startPreview();
+            } catch (IOException e) {
+                Log.d(TAG, "Error setting camera preview: " + e.getMessage());
+            }
+        }
+    }
+
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         try {
@@ -64,55 +76,16 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_UP) {
-            handleTouch(event);
+            ((MainActivity) getContext()).stopListening();
+            ((MainActivity) getContext()).onResume();
             return true;
-        } else if (event.getAction() == MotionEvent.ACTION_DOWN) {
+        } else
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+//            ((MainActivity) getContext()).releaseCamera();
             ((MainActivity) getContext()).listenToSpeak();
             return true;
         }
         return false;
     }
 
-    private void handleTouch(MotionEvent event) {
-        float x = event.getX();
-        float y = event.getY();
-        Log.d(TAG, "Touched at: (" + x + ", " + y + ")");
-        // Implement your custom functionality here
-        // For example, you can use the touch coordinates to focus the camera
-        focusOnTouch((int) x, (int) y);
-    }
-
-    private void focusOnTouch(int x, int y) {
-        Camera.Parameters params = mCamera.getParameters();
-        if (params.getMaxNumFocusAreas() > 0) {
-            Camera.Area focusArea = new Camera.Area(calculateFocusArea(x, y), 1000);
-            params.setFocusAreas(Arrays.asList(focusArea));
-            mCamera.setParameters(params);
-            mCamera.autoFocus(new Camera.AutoFocusCallback() {
-                @Override
-                public void onAutoFocus(boolean success, Camera camera) {
-                    // Do something when focus is achieved or failed
-                }
-            });
-        } else {
-            mCamera.autoFocus(new Camera.AutoFocusCallback() {
-                @Override
-                public void onAutoFocus(boolean success, Camera camera) {
-                    // Do something when focus is achieved or failed
-                }
-            });
-        }
-    }
-
-    private Rect calculateFocusArea(int x, int y) {
-        int left = clamp(x - 100, 0, 2000) - 1000;
-        int top = clamp(y - 100, 0, 2000) - 1000;
-        int right = clamp(x + 100, 0, 2000) - 1000;
-        int bottom = clamp(y + 100, 0, 2000) - 1000;
-        return new Rect(left, top, right, bottom);
-    }
-
-    private int clamp(int value, int min, int max) {
-        return Math.max(min, Math.min(max, value));
-    }
 }
