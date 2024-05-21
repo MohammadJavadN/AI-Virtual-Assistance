@@ -4,9 +4,13 @@ import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.INTERNET;
 import static android.Manifest.permission.RECORD_AUDIO;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
+import android.media.AudioFormat;
+import android.media.AudioRecord;
+import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -28,8 +32,12 @@ import com.example.ai_virtual_assistance.ui.home.ServerConnection;
 
 import java.util.Locale;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.Socket;
 public class MainActivity extends AppCompatActivity implements ServerConnection.OnMessageReceived, TextToSpeech.OnInitListener {
 
+//    String serverAddress = ""
     private static final int REQUEST_CAMERA_PERMISSION = 200;
     private Camera mCamera;
     private CameraPreview mPreview;
@@ -105,8 +113,7 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
                 installIntent.setAction(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
                 startActivity(installIntent);
                 Log.e("TTS", "activity started");
-            }
-            else {
+            } else {
                 Log.d("TTS", "Initialization successful");
                 speak("سلام خوش آمدید. چطور می توانم به شما کمک کنم؟");
             }
@@ -143,17 +150,19 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
     }
 
     public void listenToSpeak() {
-        if (tts.isSpeaking()) {
-            tts.stop();
-            return;
-        }
         releaseCamera();
-        System.out.println("### in speech");
-        speechRecognizer.startListening(intent);
+        startRecording();
+//        if (tts.isSpeaking()) {
+//            tts.stop();
+//            return;
+//        }
+//        System.out.println("### in speech");
+//        speechRecognizer.startListening(intent);
     }
 
-    public void stopListening(){
-        speechRecognizer.stopListening();
+    public void stopListening() {
+        stopRecording();
+//        speechRecognizer.stopListening();
     }
 
     private void setupCamera() {
@@ -183,6 +192,7 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
             }
         }
     }
+
     private void releaseCamera() {
         if (mCamera != null) {
             mCamera.release();
@@ -204,4 +214,57 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
             }
         }
     }
+    private static final int CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO;
+    private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
+
+    private static final int SAMPLE_RATE = 44100;
+    private static final int BUFFER_SIZE = AudioRecord.getMinBufferSize(SAMPLE_RATE,
+            CHANNEL_CONFIG, AUDIO_FORMAT);
+
+    private AudioRecord recorder;
+    private boolean isRecording = false;
+
+    @SuppressLint("MissingPermission")
+    private void startRecording() {
+        recorder = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLE_RATE,
+                CHANNEL_CONFIG, AUDIO_FORMAT, BUFFER_SIZE);
+
+        recorder.startRecording();
+        isRecording = true;
+
+        new Thread(new AudioStreamer()).start();
+    }
+
+    private void stopRecording() {
+        if (recorder != null) {
+            isRecording = false;
+            recorder.stop();
+            recorder.release();
+            recorder = null;
+        }
+    }
+
+    private class AudioStreamer implements Runnable {
+        @Override
+        public void run() {
+            try {
+                Socket socket = new Socket("172.20.25.224", 12345);
+                OutputStream outputStream = socket.getOutputStream();
+                byte[] buffer = new byte[BUFFER_SIZE];
+
+                while (isRecording) {
+                    int read = recorder.read(buffer, 0, buffer.length);
+                    if (read > 0) {
+                        outputStream.write(buffer, 0, read);
+                    }
+                }
+
+                outputStream.close();
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 }

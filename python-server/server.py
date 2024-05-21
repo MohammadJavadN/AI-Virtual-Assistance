@@ -1,24 +1,21 @@
-from flask import Flask, request, jsonify
-from chatterbot import ChatBot
-from chatterbot.trainers import ChatterBotCorpusTrainer
+import socket
 
-app = Flask(__name__)
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.bind(('0.0.0.0', 12345))
+server_socket.listen(1)
 
-# Create chatbot
-chatbot = ChatBot('VirtualAssistant')
-trainer = ChatterBotCorpusTrainer(chatbot)
-trainer.train("chatterbot.corpus.english")
+print("Server is listening")
 
+while True:
+    client_socket, addr = server_socket.accept()
+    print(f"Connection from {addr}")
 
-@app.route('/get_response', methods=['GET'])
-def get_response():
-    user_input = request.args.get('input')
-    if user_input:
-        bot_response = chatbot.get_response(user_input)
-        return jsonify({'response': str(bot_response)})
-    else:
-        return jsonify({'response': 'No input provided'}), 400
+    with open('received_audio.pcm', 'wb') as f:
+        while True:
+            data = client_socket.recv(1024)
+            if not data:
+                break
+            f.write(data)
 
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    client_socket.close()
+    print(f"Connection from {addr} closed")
