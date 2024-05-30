@@ -20,6 +20,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -30,6 +31,8 @@ import com.example.ai_virtual_assistance.ui.home.CameraPreview;
 import com.example.ai_virtual_assistance.ui.home.MyRecognitionListener;
 import com.example.ai_virtual_assistance.ui.home.ServerConnection;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.Locale;
 
 import java.io.IOException;
@@ -248,8 +251,9 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
         @Override
         public void run() {
             try {
-                Socket socket = new Socket("172.20.25.224", 12345);
+                Socket socket = new Socket("192.168.43.226", 12345);
                 OutputStream outputStream = socket.getOutputStream();
+                InputStream inputStream = socket.getInputStream();
                 byte[] buffer = new byte[BUFFER_SIZE];
 
                 while (isRecording) {
@@ -259,6 +263,24 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
                     }
                 }
 
+                // Signal the server that the audio data has been completely sent
+                socket.shutdownOutput();
+
+                // Read response from the server
+                ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
+                byte[] responseChunk = new byte[1024];
+                int bytesRead;
+
+                while ((bytesRead = inputStream.read(responseChunk)) != -1) {
+                    responseBuffer.write(responseChunk, 0, bytesRead);
+                }
+
+                String response = responseBuffer.toString("UTF-8");
+
+                // Handle the server's response
+                System.out.println(response);
+
+                inputStream.close();
                 outputStream.close();
                 socket.close();
             } catch (IOException e) {
@@ -266,5 +288,4 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
             }
         }
     }
-
 }

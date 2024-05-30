@@ -61,4 +61,6 @@ dependencies {
     implementation libs.camera.extensions
     implementation libs.material.v130
 
+    implementation libs.object.detection
+    implementation libs.object.detection.custom
 }
