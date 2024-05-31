@@ -29,6 +29,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.ai_virtual_assistance.ui.home.CameraPreview;
 import com.example.ai_virtual_assistance.ui.home.MyRecognitionListener;
+import com.example.ai_virtual_assistance.ui.home.OverlayView;
 import com.example.ai_virtual_assistance.ui.home.ServerConnection;
 
 import java.io.ByteArrayOutputStream;
@@ -42,23 +43,11 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
 
 //    String serverAddress = ""
     private static final int REQUEST_CAMERA_PERMISSION = 200;
-    private Camera mCamera;
-    private CameraPreview mPreview;
     private TextToSpeech tts;
     private SpeechRecognizer speechRecognizer;
     private Intent intent;
     private ServerConnection serverConnection;
     private MyRecognitionListener recognitionListener;
-
-    static Camera c = null;
-    public static Camera getCameraInstance() {
-        try {
-            c = Camera.open();
-        } catch (Exception e) {
-            Log.d("MainActivity", "Camera is not available: " + e.getMessage());
-        }
-        return c;
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -128,7 +117,8 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
     private void speak(String text) {
         if (tts != null && !tts.getEngines().isEmpty()) {
             System.out.println("### speak");
-            releaseCamera();
+//            releaseCamera();
+            mCameraPreview.releaseCamera();
             System.out.println("### speak releaseCamera");
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
             System.out.println("### speak speak");
@@ -158,67 +148,35 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
     }
 
     public void listenToSpeak() {
-        System.out.println("### listenToSpeak");
-        releaseCamera();
         startRecording();
-//        if (tts.isSpeaking()) {
-//            tts.stop();
-//            return;
-//        }
-//        System.out.println("### in speech");
-//        speechRecognizer.startListening(intent);
     }
 
     public void stopListening() {
         stopRecording();
-//        speechRecognizer.stopListening();
     }
 
-    private void setupCamera() {
-        System.out.println("### in setupCamera");
-        if (mPreview != null)
-            if (CameraPreview.isCameraReleased)
-                releaseCamera();
-        System.out.println("### in setupCamera2");
+    private CameraPreview mCameraPreview;
+    private OverlayView mOverlayView;
 
-        // Open the camera and create a CameraPreview instance
-        mCamera = getCameraInstance();
-        if (mCamera != null) {
-            mPreview = new CameraPreview(this, mCamera);
-            FrameLayout preview = findViewById(R.id.camera_preview);
-            preview.addView(mPreview);
-        }
+    private void setupCamera() {
+        mCameraPreview = findViewById(R.id.camera_preview);
+        mOverlayView = findViewById(R.id.overlay_view);
+
+        mCameraPreview.setOverlayView(mOverlayView);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        System.out.println("### onPause");
-        releaseCamera();
+        if (mCameraPreview != null)
+            mCameraPreview.releaseCamera();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        if (mCamera == null) {
-            setupCamera();
-//            mCamera = getCameraInstance();
-//            if (mCamera != null) {
-//                mPreview.setCamera(mCamera);
-//                mCamera.startPreview();
-//            }
-        }
-    }
-
-    private void releaseCamera() {
-        System.out.println("### camera released");
-        if (mCamera != null) {
-            mCamera.setPreviewCallback(null);
-            mCamera.stopPreview();
-            mCamera.release();
-            mCamera = null;
-            CameraPreview.isCameraReleased = true;
-        }
+        if (mCameraPreview != null)
+            mCameraPreview.setupCamera();
     }
 
     @Override

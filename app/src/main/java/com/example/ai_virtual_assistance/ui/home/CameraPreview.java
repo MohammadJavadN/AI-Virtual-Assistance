@@ -2,8 +2,8 @@ package com.example.ai_virtual_assistance.ui.home;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.ImageFormat;
-import android.graphics.Rect;
 import android.hardware.Camera;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -18,10 +18,8 @@ import com.google.mlkit.vision.objects.DetectedObject;
 import com.google.mlkit.vision.objects.ObjectDetection;
 import com.google.mlkit.vision.objects.ObjectDetector;
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions;
-import com.google.mlkit.vision.objects.defaults.PredefinedCategory;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 @SuppressLint("ViewConstructor")
@@ -31,9 +29,18 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     private SurfaceHolder mHolder;
     private Camera mCamera;
     public static boolean isCameraReleased = false;
-    public CameraPreview(Context context, Camera camera) {
+    private OverlayView mOverlayView;
+
+    public CameraPreview(Context context) {
         super(context);
-        mCamera = camera;
+        init();
+    }
+
+    public CameraPreview(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        init();
+    }
+    private void init() {
         mHolder = getHolder();
         mHolder.addCallback(this);
         setOnTouchListener(this); // Set the touch listener
@@ -41,29 +48,13 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             setupObjectDetector();
     }
 
-    public void setCamera(Camera camera) {
-        mCamera = camera;
-        if (mCamera != null) {
-            try {
-                mCamera.setPreviewDisplay(mHolder);
-                mCamera.startPreview();
-            } catch (IOException e) {
-                Log.d(TAG, "Error setting camera preview: " + e.getMessage());
-            }
-        }
+    public void setOverlayView(OverlayView overlayView) {
+        mOverlayView = overlayView;
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        try {
-            mCamera.setPreviewDisplay(holder);
-            mCamera.startPreview();
-            mCamera.setPreviewCallback(this); // TODO: 31.05.24
-            mCamera.setDisplayOrientation(90);
-            isCameraReleased = false;
-        } catch (IOException e) {
-            Log.d(TAG, "Error setting camera preview: " + e.getMessage());
-        }
+        setupCamera();
     }
 
     @Override
@@ -89,10 +80,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         // empty. Take care of releasing the Camera preview in your activity.
-        if (mCamera != null) {
-            mCamera.release();
-            mCamera = null;
-        }
+        releaseCamera();
     }
 
 
@@ -108,7 +96,53 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         processImage(image);
     }
 
+    public void setupCamera() {
+        if (isCameraReleased) {
+            releaseCamera();
+        }
+        mCamera = getCameraInstance();
+        if (mCamera != null) {
+            try {
+                mCamera.setPreviewDisplay(mHolder);
+                mCamera.setPreviewCallback(this);
+                mCamera.setDisplayOrientation(90);
+                mCamera.startPreview();
+                isCameraReleased = false;
+            } catch (IOException e) {
+                Log.e("CameraPreview", "Error setting up camera preview", e);
+            }
+        }
+    }
+
+    public void releaseCamera() {
+        if (mCamera != null) {
+            mCamera.setPreviewCallback(null);
+            mCamera.stopPreview();
+            mCamera.release();
+            mCamera = null;
+            isCameraReleased = true;
+        }
+    }
+
+    public static Camera getCameraInstance() {
+        Camera c = null;
+        try {
+            c = Camera.open();
+        } catch (Exception e) {
+            Log.e("CameraPreview", "Camera is not available", e);
+        }
+        return c;
+    }
     private void processImage(InputImage image) {
+        objectDetector.process(image)
+                .addOnSuccessListener(detectedObjects -> {
+                    if (mOverlayView != null) {
+                        mOverlayView.setDetectedObjects(detectedObjects);
+                    }
+                })
+                .addOnFailureListener(e -> Log.e("CameraPreview", "Object detection failed", e));
+    }
+    private void processImage2(InputImage image) {
         Log.d(TAG, " processImage");
 
         objectDetector.process(image)
@@ -156,7 +190,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             return true;
         } else
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
-//            ((MainActivity) getContext()).releaseCamera();
+            releaseCamera();
             ((MainActivity) getContext()).listenToSpeak();
             return true;
         }
