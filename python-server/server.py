@@ -1,8 +1,11 @@
-import socket
 import io
-from pydub import AudioSegment
-import speech_recognition as sr
+import socket
 import logging
+import speech_recognition as sr
+
+from pydub import AudioSegment
+from googletrans import Translator
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -33,7 +36,7 @@ def receive_audio_data():
         # Convert PCM to WAV using pydub and in-memory bytes buffer
         audio_segment = AudioSegment(
             data=pcm_data.read(),
-            sample_width=2,  # Number of bytes per sample (e.g., 16-bit PCM is 2 bytes)
+            sample_width=2,  # Number of bytes per sample
             frame_rate=44100,  # Sample rate in Hz
             channels=1  # Number of audio channels (1 for mono, 2 for stereo)
         )
@@ -49,13 +52,17 @@ def receive_audio_data():
 
         try:
             text = recognizer.recognize_google(audio_data, language='fa-IR')
+            logging.info(text)
+            text = translate_to_en(text)
             response = f"Recognized text: {text}\n"
             logging.info(response)
         except sr.UnknownValueError:
-            response = "Google Speech Recognition could not understand the audio\n"
+            response = "Google Speech Recognition"
+            + " could not understand the audio\n"
             logging.error(response)
         except sr.RequestError as e:
-            response = f"Could not request results from Google Speech Recognition service; {e}\n"
+            response = "Could not request results from Google Speech"
+            + f" Recognition service; {e}\n"
             logging.error(response)
 
         # Send the response back to the client
@@ -63,6 +70,12 @@ def receive_audio_data():
 
         client_socket.close()
         logging.info(f"Connection from {addr} closed")
+
+
+def translate_to_en(text):
+    translator = Translator()
+    translated_text = translator.translate(text, src='fa', dest='en').text
+    return translated_text
 
 
 if __name__ == "__main__":
