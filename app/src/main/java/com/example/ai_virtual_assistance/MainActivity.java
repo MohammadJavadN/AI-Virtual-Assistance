@@ -50,8 +50,8 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
     private ServerConnection serverConnection;
     private MyRecognitionListener recognitionListener;
 
+    static Camera c = null;
     public static Camera getCameraInstance() {
-        Camera c = null;
         try {
             c = Camera.open();
         } catch (Exception e) {
@@ -127,8 +127,13 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
 
     private void speak(String text) {
         if (tts != null && !tts.getEngines().isEmpty()) {
+            System.out.println("### speak");
             releaseCamera();
+            System.out.println("### speak releaseCamera");
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
+            System.out.println("### speak speak");
+//            onResume();
+            System.out.println("### speak onResume");
         } else {
             Log.e("TTS", "TTS engine is not initialized or not available");
         }
@@ -153,6 +158,7 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
     }
 
     public void listenToSpeak() {
+        System.out.println("### listenToSpeak");
         releaseCamera();
         startRecording();
 //        if (tts.isSpeaking()) {
@@ -169,6 +175,12 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
     }
 
     private void setupCamera() {
+        System.out.println("### in setupCamera");
+        if (mPreview != null)
+            if (CameraPreview.isCameraReleased)
+                releaseCamera();
+        System.out.println("### in setupCamera2");
+
         // Open the camera and create a CameraPreview instance
         mCamera = getCameraInstance();
         if (mCamera != null) {
@@ -181,6 +193,7 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
     @Override
     protected void onPause() {
         super.onPause();
+        System.out.println("### onPause");
         releaseCamera();
     }
 
@@ -188,18 +201,23 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
     public void onResume() {
         super.onResume();
         if (mCamera == null) {
-            mCamera = getCameraInstance();
-            if (mCamera != null) {
-                mPreview.setCamera(mCamera);
-                mCamera.startPreview();
-            }
+            setupCamera();
+//            mCamera = getCameraInstance();
+//            if (mCamera != null) {
+//                mPreview.setCamera(mCamera);
+//                mCamera.startPreview();
+//            }
         }
     }
 
     private void releaseCamera() {
+        System.out.println("### camera released");
         if (mCamera != null) {
+            mCamera.setPreviewCallback(null);
+            mCamera.stopPreview();
             mCamera.release();
             mCamera = null;
+            CameraPreview.isCameraReleased = true;
         }
     }
 
