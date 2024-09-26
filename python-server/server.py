@@ -5,6 +5,8 @@ import speech_recognition as sr
 
 from pydub import AudioSegment
 from googletrans import Translator
+from flask import Flask, request, jsonify
+from threading import Thread
 
 
 logging.basicConfig(level=logging.INFO)
@@ -78,5 +80,31 @@ def translate_to_en(text):
     return translated_text
 
 
+# Flask app for translation
+app = Flask(__name__)
+translator = Translator()
+
+
+@app.route('/translate', methods=['POST'])
+def translate_text():
+    data = request.json
+    text = data.get('text', '')
+    target_lang = data.get('target_lang', 'fa')
+
+    if not text:
+        return jsonify({'error': 'No text provided'}), 400
+
+    try:
+        translated_text = translator.translate(text, dest=target_lang).text
+        return jsonify({'translated_text': translated_text}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == "__main__":
-    receive_audio_data()
+    # Start the audio receiving server in a separate thread
+    audio_thread = Thread(target=receive_audio_data)
+    audio_thread.start()
+
+    # Start the Flask app for translation
+    app.run(host='0.0.0.0', port=5000)

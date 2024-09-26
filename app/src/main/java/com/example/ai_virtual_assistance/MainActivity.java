@@ -7,6 +7,7 @@ import static android.Manifest.permission.RECORD_AUDIO;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.hardware.Camera;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
@@ -29,11 +30,13 @@ import androidx.core.content.ContextCompat;
 
 import com.example.ai_virtual_assistance.ui.home.CameraPreview;
 import com.example.ai_virtual_assistance.ui.home.MyRecognitionListener;
+import com.example.ai_virtual_assistance.ui.home.ObjectDetectionHelper;
 import com.example.ai_virtual_assistance.ui.home.OverlayView;
 import com.example.ai_virtual_assistance.ui.home.ServerConnection;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Locale;
 
 import java.io.IOException;
@@ -55,9 +58,20 @@ public class MainActivity extends AppCompatActivity implements ServerConnection.
         setContentView(R.layout.activity_main);
 
         getPermission();
+
+        try {
+            objectDetectionHelper = new ObjectDetectionHelper(this);
+        } catch (IOException e) {
+            Log.e("MainActivity", "Error initializing TensorFlow Lite model", e);
+        }
 //        speak("Hello, how are you?");
     }
 
+    private ObjectDetectionHelper objectDetectionHelper;
+    public void processFrame(Bitmap bitmap) {
+        List<ObjectDetectionHelper.Detection> detections = objectDetectionHelper.detectObjects(bitmap);
+        mOverlayView.setDetectedObjects(detections);
+    }
     private void getPermission() {
         if (ContextCompat.checkSelfPermission(this, RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(this, CAMERA) != PackageManager.PERMISSION_GRANTED ||

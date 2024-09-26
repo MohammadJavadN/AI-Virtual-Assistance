@@ -1,7 +1,11 @@
 package com.example.ai_virtual_assistance.ui.home;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -19,6 +23,7 @@ import com.google.mlkit.vision.objects.ObjectDetection;
 import com.google.mlkit.vision.objects.ObjectDetector;
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
@@ -33,19 +38,21 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
 
     public CameraPreview(Context context) {
         super(context);
-        init();
+        init(context);
     }
 
     public CameraPreview(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init();
+        init(context);
     }
-    private void init() {
+    private MainActivity mActivity;
+    private void init(Context context) {
         mHolder = getHolder();
         mHolder.addCallback(this);
         setOnTouchListener(this); // Set the touch listener
-        if (objectDetector == null)
-            setupObjectDetector();
+        mActivity = (MainActivity) context;
+//        if (objectDetector == null)
+//            setupObjectDetector();
     }
 
     public void setOverlayView(OverlayView overlayView) {
@@ -83,17 +90,37 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         releaseCamera();
     }
 
-
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
-        Log.d(TAG, " onPreviewFrame");
-        if (mCamera == null || isCameraReleased) {
-            return;
-        }
-        Camera.Parameters parameters = camera.getParameters();
-        Camera.Size size = parameters.getPreviewSize();
-        InputImage image = InputImage.fromByteArray(data, size.width, size.height, 90, ImageFormat.NV21);
-        processImage(image);
+        Camera.Size previewSize = camera.getParameters().getPreviewSize();
+        YuvImage yuvImage = new YuvImage(data, ImageFormat.NV21, previewSize.width, previewSize.height, null);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        yuvImage.compressToJpeg(new android.graphics.Rect(0, 0, previewSize.width, previewSize.height), 100, out);
+        byte[] imageBytes = out.toByteArray();
+        Bitmap bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
+
+        // Process the captured frame
+        mActivity.processFrame(bitmap);
+    }
+//    @Override
+//    public void onPreviewFrame(byte[] data, Camera camera) {
+//        Log.d(TAG, " onPreviewFrame");
+//        if (mCamera == null || isCameraReleased) {
+//            return;
+//        }
+//        Camera.Parameters parameters = camera.getParameters();
+//        Camera.Size size = parameters.getPreviewSize();
+////        InputImage image = InputImage.fromByteArray(data, size.width, size.height, 90, ImageFormat.NV21);
+////        processImage(image);
+//        Bitmap bitmap = getBitmapFromByteArray(data, size.width, size.height);
+//        mActivity.processFrame(bitmap);
+//    }
+    private Bitmap getBitmapFromByteArray(byte[] data, int width, int height) {
+        YuvImage yuvImage = new YuvImage(data, ImageFormat.NV21, width, height, null);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        yuvImage.compressToJpeg(new Rect(0, 0, width, height), 50, out);
+        byte[] bytes = out.toByteArray();
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
     }
 
     public void setupCamera() {
@@ -133,54 +160,54 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         }
         return c;
     }
-    private void processImage(InputImage image) {
-        objectDetector.process(image)
-                .addOnSuccessListener(detectedObjects -> {
-                    if (mOverlayView != null) {
-                        mOverlayView.setDetectedObjects(detectedObjects);
-                    }
-                })
-                .addOnFailureListener(e -> Log.e("CameraPreview", "Object detection failed", e));
-    }
-    private void processImage2(InputImage image) {
-        Log.d(TAG, " processImage");
+//    private void processImage(InputImage image) {
+//        objectDetector.process(image)
+//                .addOnSuccessListener(detectedObjects -> {
+//                    if (mOverlayView != null) {
+//                        mOverlayView.setDetectedObjects(detectedObjects);
+//                    }
+//                })
+//                .addOnFailureListener(e -> Log.e("CameraPreview", "Object detection failed", e));
+//    }
+//    private void processImage2(InputImage image) {
+//        Log.d(TAG, " processImage");
+//
+//        objectDetector.process(image)
+//                .addOnSuccessListener(detectedObjects -> {
+//                    Log.d(TAG, " detectedObjects");
+//                    StringBuilder result = new StringBuilder();
+//                    for (DetectedObject detectedObject : detectedObjects) {
+//                        result.append("Object detected at ")
+//                                .append(detectedObject.getBoundingBox().toString())
+//                                .append("\n");
+//
+//                        // Get the labels (categories) for the detected object
+//                        List<DetectedObject.Label> labels = detectedObject.getLabels();
+//                        for (DetectedObject.Label label : labels) {
+//                            result.append("Label: ")
+//                                    .append(label.getText())
+//                                    .append(", Confidence: ")
+//                                    .append(label.getConfidence())
+//                                    .append("\n");
+//                        }
+//                    }
+////                    mTextView.setText(result.toString()); todo
+//                    Log.d(TAG, "Object detection result: " + result.toString());
+//                })
+//                .addOnFailureListener(e -> Log.e(TAG, "Object detection failed: " + e.getMessage()));
+//    }
 
-        objectDetector.process(image)
-                .addOnSuccessListener(detectedObjects -> {
-                    Log.d(TAG, " detectedObjects");
-                    StringBuilder result = new StringBuilder();
-                    for (DetectedObject detectedObject : detectedObjects) {
-                        result.append("Object detected at ")
-                                .append(detectedObject.getBoundingBox().toString())
-                                .append("\n");
-                        
-                        // Get the labels (categories) for the detected object
-                        List<DetectedObject.Label> labels = detectedObject.getLabels();
-                        for (DetectedObject.Label label : labels) {
-                            result.append("Label: ")
-                                    .append(label.getText())
-                                    .append(", Confidence: ")
-                                    .append(label.getConfidence())
-                                    .append("\n");
-                        }
-                    }
-//                    mTextView.setText(result.toString()); todo
-                    Log.d(TAG, "Object detection result: " + result.toString());
-                })
-                .addOnFailureListener(e -> Log.e(TAG, "Object detection failed: " + e.getMessage()));
-    }
-
-    private static ObjectDetector objectDetector = null;
-    private void setupObjectDetector() {
-        Log.d(TAG, " setupObjectDetector");
-
-        // Configure the object detector
-        ObjectDetectorOptions options = new ObjectDetectorOptions.Builder()
-                .setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
-                .enableClassification()  // Optional: Enable classification
-                .build();
-        objectDetector = ObjectDetection.getClient(options);
-    }
+//    private static ObjectDetector objectDetector = null;
+//    private void setupObjectDetector() {
+//        Log.d(TAG, " setupObjectDetector");
+//
+//        // Configure the object detector
+//        ObjectDetectorOptions options = new ObjectDetectorOptions.Builder()
+//                .setDetectorMode(ObjectDetectorOptions.STREAM_MODE)
+//                .enableClassification()  // Optional: Enable classification
+//                .build();
+//        objectDetector = ObjectDetection.getClient(options);
+//    }
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {

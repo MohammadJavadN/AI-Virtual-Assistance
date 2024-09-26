@@ -28,6 +28,7 @@ android {
     }
     buildFeatures {
         viewBinding true
+        mlModelBinding true
     }
 }
 
@@ -63,4 +64,8 @@ dependencies {
 
     implementation libs.object.detection
     implementation libs.object.detection.custom
+
+    implementation libs.tensorflow.lite
+    implementation libs.tensorflow.lite.support
+    implementation libs.tensorflow.lite.metadata
 }
